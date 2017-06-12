@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>
+        test websocket
+    </title>
+</head>
+<style type="text/css">
+div {
+    width: 100%;
+    height: 100px;
+    text-align: center;
+    padding-top: 20px;
+    border: 1px solid black;
+}
+</style>
+
+<body>
+    <div>
+        <input id="content" type="text" name="" placeholder="消息">
+        <br>
+        <button onclick="sendMessageToUser()">发送</button>
+    </div>
+</body>
+<script type="text/javascript">
+if (typeof(WebSocket) == 'undefined') {
+    alert('你的浏览器不支持 WebSocket ，推荐使用Google Chrome 或者 Mozilla Firefox');
+}
+var user_token = prompt("用户唯一TOKEN", "");
+if (user_token == "") {
+    user_token = "user" + Date.parse(new Date());
+}
+var uri = 'ws://192.168.3.4:12345';
+var so;
+createSocket(uri);
+/**
+ * socket建立
+ */
+function createSocket(uri) {
+    so = new WebSocket(uri);
+    console.log(so);
+
+    so.onopen = function() {
+        if (so.readyState == 1) {
+            console.log('===user register===', user_token);
+            so.send('{"Type":1,"From":"' + user_token + '","Target":[""],"Data":""}');
+        }
+    }
+
+    so.onclose = function() {
+        so = false;
+    }
+
+    so.onmessage = function(recv_msg) {
+        console.log('===recv_msg===', recv_msg);
+        // console.log('recv_msg.type------' + recv_msg.type);
+    }
+}
+
+/**
+ * 发送消息给用户
+ */
+function sendMessageToUser() {
+    console.log("这里的so", so);
+    var content = document.getElementById('content').value;
+    so.send('{"Type":2,"From":"' + user_token + '","Target":["0cc120124175285f80dc4b13e18730bb"],"Data":"' + content + '"}');
+    return false;
+}
+</script>
+<!-- type Request struct {
+    From   string
+    Target []string
+    Data   string
+}
+type Content struct {
+    From   *Client
+    Target []*Client
+    Data   interface{}
+} -->
+
+</html>
