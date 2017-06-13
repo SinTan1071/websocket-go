@@ -1,0 +1,9 @@
+version: '2'
+services:
+  websocket-go:
+    image: rt7oney/go
+    container_name: websocket-go
+    volumes:
+      - $PWD:/go/src/too-white
+    ports:
+      - 10000:10000

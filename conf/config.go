@@ -1,5 +1,7 @@
 package conf
 
+const PORT = ":10000"
+
 const DB_DOMAIN = "localhost"
 const DB_PORT = "27017"
 const DB_DATABASE = "too-white-test"
