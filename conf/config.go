@@ -1,6 +1,6 @@
 package conf
 
-const PORT = ":10000"
+const PORT = ":12345"
 
 const DB_DOMAIN = "localhost"
 const DB_PORT = "27017"

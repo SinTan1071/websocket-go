@@ -1,9 +1,12 @@
 version: '2'
 services:
   websocket-go:
+    build: .
+    command: go run main.go client.go hub.go
     image: rt7oney/go
     container_name: websocket-go
+    working_dir: /go/src/too-white
     volumes:
       - $PWD:/go/src/too-white
     ports:
-      - 10000:10000
+      - 12345:12345
