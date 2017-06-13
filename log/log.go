@@ -1,38 +1,38 @@
 package log
 
 import (
-	"too-white/conf"
-	// "errors"
-	"labix.org/v2/mgo"
+	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"time"
 )
 
-type Log struct {
-	Time    time.Time
-	Comment string
-	Content interface{}
-}
-
-func newLog() *mgo.Session {
-	session, _ := mgo.Dial(conf.DB_DOMAIN + ":" + conf.DB_PORT)
-	// Optional. Switch the session to a monotonic behavior.
-	session.SetMode(mgo.Monotonic, true)
-	return session
+func checkFileIsExist(filename string) bool {
+	var exist = true
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		exist = false
+	}
+	return exist
 }
 
 func NewLog(comment string, data interface{}) {
-	year := time.Now().Year()
-	year_str := strconv.Itoa(year)
-	month := time.Now().Month().String()
-	log_name := year_str + "-" + month
-	session := newLog()
-	defer session.Close()
-	log := &Log{
-		Time:    time.Now(),
-		Comment: comment,
-		Content: data,
+	var f *os.File
+	var err error
+	log_file := "log/" + strconv.Itoa(time.Now().Year()) + time.Now().Month().String() + ".log"
+	if checkFileIsExist(log_file) { //如果文件存在
+		f, err = os.OpenFile(log_file, os.O_APPEND|os.O_WRONLY, os.ModeAppend) //打开文件
+		if err != nil {
+			panic(err)
+		}
+		// fmt.Println("文件存在")
+	} else {
+		f, err = os.Create(log_file) //创建文件
+		if err != nil {
+			panic(err)
+		}
+		// fmt.Println("文件不存在")
 	}
-	c := session.DB(conf.LOG_DATABASE).C(log_name)
-	c.Insert(log)
+	io.WriteString(f, "[@@@"+time.Now().String()+"@@@-###"+comment+"###]------"+fmt.Sprint(data)+"\r\n") //写入文件(字符串)
+	// fmt.Printf("写入 %d 个字节n", n)
 }
