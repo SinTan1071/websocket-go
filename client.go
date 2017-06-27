@@ -41,7 +41,9 @@ func (c *Client) readPump() {
 	c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	log.NewLog("client.go-44:", "进入readPump")
 	for {
+		log.NewLog("client.go-46:", "进入readPump的for循环")
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
