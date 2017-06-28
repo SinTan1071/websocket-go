@@ -13,7 +13,7 @@ type Request struct {
 	Data   string
 }
 type Content struct {
-	From   *Client
+	// From   *Client
 	Target []*Client
 	Data   interface{}
 }
@@ -21,8 +21,11 @@ type Content struct {
 func main() {
 	serv := newServer()
 	go serv.run()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		serveWs(serv, w, r)
+	http.HandleFunc("/c", func(w http.ResponseWriter, r *http.Request) {
+		serveWsClient(serv, w, r)
+	})
+	http.HandleFunc("/s", func(w http.ResponseWriter, r *http.Request) {
+		serveWsServer(serv, w, r)
 	})
 	err := http.ListenAndServe(conf.PORT, nil)
 	if err != nil {
