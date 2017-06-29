@@ -11,7 +11,7 @@ type Server struct {
 	broadcast  chan *Content
 	register   chan *Client
 	unregister chan *Client
-	message    chan []byte
+	request    chan *Request
 }
 
 func newServer() *Server {
@@ -21,7 +21,7 @@ func newServer() *Server {
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
 		user:       make(map[string]*Client),
-		message:    make(chan []byte),
+		request:    make(chan *Request),
 	}
 }
 
@@ -49,7 +49,7 @@ func (serv *Server) run() {
 			log.NewLog("hub.go-49:发送的消息是", string(message))
 			if content.Target != nil {
 				for _, client := range content.Target {
-					log.NewLog("hub.go-52:接受的客户端是", client)
+					log.NewLog("hub.go-52:接受的客户端是", *client)
 					if _, ok := serv.clients[client]; ok {
 						select {
 						case client.send <- message:

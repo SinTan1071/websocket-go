@@ -4,7 +4,7 @@ import (
 	"too-white/log"
 	// "bytes"
 	"encoding/json"
-	"fmt"
+	// "fmt"
 	"github.com/gorilla/websocket"
 	"io"
 	"net/http"
@@ -38,25 +38,25 @@ func (serv *Server) read() {
 	for {
 		log.NewLog("client.go-39:首先阻塞", "")
 		select {
-		case message := <-serv.message:
+		case req := <-serv.request:
 			log.NewLog("client.go-42:读取到了消息", "")
-			var m Request
-			json.Unmarshal(message, &m)
-			log.NewLog("client.go-45:传递过来的消息", string(message))
+			// var m Request
+			// json.Unmarshal(message, &m)
+			log.NewLog("client.go-45:传递过来的消息", req)
 			var client_group []*Client
 			var content Content
-			log.NewLog("client.go-48:接收消息的用户tokens", m.Target)
+			log.NewLog("client.go-48:接收消息的用户tokens", req.Target)
 			log.NewLog("client.go-49:查看一下所有的用户", serv.user)
-			for _, user_token := range m.Target {
+			for _, user_token := range req.Target {
 				if _, ok := serv.user[user_token]; ok {
 					client_group = append(client_group, serv.user[user_token])
-					content.Target = client_group
-					log.NewLog("client.go-54:接收消息的用户（客户端）", client_group)
-					log.NewLog("client.go-55:要发送的消息", m.Data)
-					content.Data = m.Data
-					serv.broadcast <- &content
 				}
 			}
+			content.Target = client_group
+			log.NewLog("client.go-56:接收消息的用户（客户端）", client_group)
+			log.NewLog("client.go-57:要发送的消息", req.Data)
+			content.Data = req.Data
+			serv.broadcast <- &content
 			// default:
 			// 	break
 		}
@@ -119,20 +119,22 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 
 func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
 	go serv.read()
-	err := r.ParseForm()
-	// _target := r.Form.Get("target")
-	// // _type := r.Form.Get("type")
-	// _data := r.Form.Get("data")
-	// fmt.Println("target", target)
-	// fmt.Println("data", data)
-	fmt.Println("数据", r.Body)
-	target := []string{"0cc120124175285f80dc4b13e18730bb", "858803d74ab00f41c548f11ca4468df1"}
-	request := Request{Target: target, Data: "lalal"}
-	m, _ := json.Marshal(request)
-	log.NewLog("client.go-46:②读取消息", "")
-	serv.message <- m
-	if err != nil {
+	err1 := r.ParseForm()
+	_msg := r.Form.Get("Message")
+	log.NewLog("client.go-124:读取服务器消息", _msg)
+	var req Request
+	err2 := json.Unmarshal([]byte(_msg), &req)
+	log.NewLog("client.go-127:读取服务器消息解析后的", req)
+	// fmt.Println("请求", r)
+	// fmt.Println("请求体", r.Body)
+	// target := []string{"0cc120124175285f80dc4b13e18730bb", "858803d74ab00f41c548f11ca4468df1"}
+	// request := Request{Target: target, Data: "lalal"}
+	// m, _ := json.Marshal(request)
+	if err1 != nil || err2 != nil || _msg == "" || &req == nil {
 		io.WriteString(w, "400")
+		return
 	}
+	serv.request <- &req
 	io.WriteString(w, "200")
+	return
 }
