@@ -7,8 +7,6 @@ import (
 )
 
 type Request struct {
-	Type   int
-	From   string
 	Target []string
 	Data   string
 }
