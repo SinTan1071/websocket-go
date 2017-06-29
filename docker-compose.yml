@@ -1,7 +1,7 @@
 version: '2'
 services:
   websocket-go:
-    build: .
+    # build: .
     command: go run main.go client.go hub.go
     image: rt7oney/go
     container_name: websocket-go
