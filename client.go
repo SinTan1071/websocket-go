@@ -164,12 +164,15 @@ func Auth(uid, token string) {
 	resp, err := http.Get(url)
 	if err != nil {
 		check <- false
+		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	log.NewLog("服务器鉴权返回", string(body))
 	if string(body) != "200" {
 		check <- false
+		return
 	}
 	check <- true
+	return
 }
