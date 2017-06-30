@@ -5,11 +5,11 @@ import (
 	// "bytes"
 	"encoding/json"
 	// "fmt"
+	"encoding/base64"
 	"github.com/gorilla/websocket"
 	"io"
 	"net/http"
 	"time"
-	// "too-white/conf"
 )
 
 const (
@@ -122,9 +122,10 @@ func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
 	err1 := r.ParseForm()
 	_msg := r.Form.Get("Message")
 	log.NewLog("client.go-124:读取服务器消息", _msg)
+	decode, _ := base64.StdEncoding.DecodeString(_msg)
 	var req Request
-	err2 := json.Unmarshal([]byte(_msg), &req)
-	log.NewLog("client.go-127:读取服务器消息解析后的", req)
+	err2 := json.Unmarshal(decode, &req)
+	log.NewLog("client.go-128:读取服务器消息解析后的", req)
 	// fmt.Println("请求", r)
 	// fmt.Println("请求体", r.Body)
 	// target := []string{"0cc120124175285f80dc4b13e18730bb", "858803d74ab00f41c548f11ca4468df1"}

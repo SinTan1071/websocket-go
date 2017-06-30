@@ -32,8 +32,8 @@ var user_token = prompt("用户唯一TOKEN", "");
 if (user_token == "") {
     user_token = "user" + Date.parse(new Date());
 }
-var uri = 'ws://127.0.0.1:12345/c?uid='+user_token;
-// var uri = 'ws://10.65.209.164:12345';
+// var uri = 'ws://127.0.0.1:12345/c?uid='+user_token;
+var uri = 'ws://10.65.209.164:12345/c?uid='+user_token;
 var so;
 createSocket(uri);
 /**
