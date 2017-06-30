@@ -31,12 +31,13 @@ func (serv *Server) run() {
 		select {
 		case client := <-serv.register:
 			serv.clients[client] = true
-			serv.user[client.uid] = client
-			log.NewLog("hub.go-35:把客户端放在线程池里，第二步", serv.clients)
+			serv.user[client.uid+":"+client.app] = client
+			log.NewLog("hub.go-35:把客户端放在线程池里---"+client.uid+":"+client.app, serv.clients)
+			log.NewLog("hub.go-36:所有客户端", serv.user)
 		case client := <-serv.unregister:
-			log.NewLog("hub.go-37:用户离线", serv.clients)
-			if _, ok := serv.user[client.uid]; ok {
-				delete(serv.user, client.uid)
+			log.NewLog("hub.go-38:用户离线", serv.clients)
+			if _, ok := serv.user[client.uid+":"+client.app]; ok {
+				delete(serv.user, client.uid+":"+client.app)
 			}
 			if _, ok := serv.clients[client]; ok {
 				delete(serv.clients, client)
@@ -44,19 +45,19 @@ func (serv *Server) run() {
 			}
 		case content := <-serv.broadcast:
 			// 根据content传过来的需要广播的target来遍历广播
-			log.NewLog("hub.go-47:开始广播了！！！", "")
+			log.NewLog("hub.go-48:开始广播了！！！", "")
 			message, _ := json.Marshal(content.Data)
-			log.NewLog("hub.go-49:发送的消息是", string(message))
+			log.NewLog("hub.go-50:发送的消息是", string(message))
 			if content.Target != nil {
 				for _, client := range content.Target {
-					log.NewLog("hub.go-52:接受的客户端是", *client)
+					log.NewLog("hub.go-53:接受的客户端是", *client)
 					if _, ok := serv.clients[client]; ok {
 						select {
 						case client.send <- message:
 						default:
 							close(client.send)
 							delete(serv.clients, client)
-							delete(serv.user, client.uid)
+							delete(serv.user, client.uid+":"+client.app)
 						}
 					}
 				}

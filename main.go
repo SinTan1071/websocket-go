@@ -16,6 +16,8 @@ type Content struct {
 	Data   interface{}
 }
 
+var check = make(chan bool, 1024)
+
 func main() {
 	serv := newServer()
 	go serv.run()

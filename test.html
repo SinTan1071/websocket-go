@@ -24,6 +24,7 @@ div {
         <button onclick="sendMessageToUser()">发送</button>
     </div>
 </body>
+<script src="base64.js"></script>
 <script type="text/javascript">
 if (typeof(WebSocket) == 'undefined') {
     alert('你的浏览器不支持 WebSocket ，推荐使用Google Chrome 或者 Mozilla Firefox');
@@ -32,8 +33,8 @@ var user_token = prompt("用户唯一TOKEN", "");
 if (user_token == "") {
     user_token = "user" + Date.parse(new Date());
 }
-// var uri = 'ws://127.0.0.1:12345/c?uid='+user_token;
-var uri = 'ws://10.65.209.164:12345/c?uid='+user_token;
+var uri = 'ws://127.0.0.1:12345/c?uid=' + "1" + "&token=" + user_token + "&app=" + "web";
+// var uri = 'ws://10.65.209.164:12345/c?uid=' + user_token;
 var so;
 createSocket(uri);
 /**
@@ -56,7 +57,9 @@ function createSocket(uri) {
 
     so.onmessage = function(recv_msg) {
         console.log('===recv_msg===', recv_msg);
-        // console.log('recv_msg.type------' + recv_msg.type);
+        var base = new Base64();
+        var decodeStr = base.decode(recv_msg.data);
+        console.log('recv_msg.data------' + decodeStr);
     }
 }
 
