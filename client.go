@@ -150,6 +150,10 @@ func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
 	log.NewLog("client.go-150:读取服务器消息解析后的", req)
 	ip := util.GetIp()
 	if ip != conf.SERVER_IP || err1 != nil || err2 != nil || _msg == "" || &req == nil {
+		log.NewLog("client.go-服务端消息验证:", conf.SERVER_IP)
+		log.NewLog("client.go-服务端消息验证:", err1)
+		log.NewLog("client.go-服务端消息验证:", err2)
+		log.NewLog("client.go-服务端消息验证:", _msg)
 		io.WriteString(w, "400")
 		return
 	}
@@ -163,6 +167,7 @@ func Auth(uid, token string) {
 	url := conf.CLIENT_AUTH + "?uid=" + uid + "&token=" + token
 	resp, err := http.Get(url)
 	if err != nil {
+		log.NewLog("client.go-Auth方法请求服务器报错", err)
 		check <- false
 		return
 	}
