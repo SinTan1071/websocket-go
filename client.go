@@ -150,7 +150,7 @@ func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
 	log.NewLog("client.go-150:读取服务器消息解析后的", req)
 	ip := util.GetIp()
 	if ip != conf.SERVER_IP || err1 != nil || err2 != nil || _msg == "" || &req == nil {
-		log.NewLog("client.go-服务端消息验证:", conf.SERVER_IP)
+		log.NewLog("client.go-服务端消息验证:", ip)
 		log.NewLog("client.go-服务端消息验证:", err1)
 		log.NewLog("client.go-服务端消息验证:", err2)
 		log.NewLog("client.go-服务端消息验证:", _msg)
