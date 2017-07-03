@@ -31,7 +31,7 @@ GET http://xx.xxx.xx.xx:12345/s
 |Message|true|string|整体消息体|
 
 ### 客户端:
-ws://xx.xxx.xx.xx:12345/c
+GET ws://xx.xxx.xx.xx:12345/c
 
 #### 请求参数
 | 字段                     |   必选            |   类型及范围    | 说明                               |
