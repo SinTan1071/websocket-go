@@ -18,26 +18,28 @@ div {
 </style>
 
 <body>
-    <div>
-        <input id="content" type="text" name="" placeholder="消息">
-        <br>
-        <button onclick="sendMessageToUser()">发送</button>
+    消息：
+    <div id="content">
     </div>
 </body>
 <!-- <script src="base64.js"></script> -->
 <script type="text/javascript">
-// var base = new Base64();
 if (typeof(WebSocket) == 'undefined') {
     alert('你的浏览器不支持 WebSocket ，推荐使用Google Chrome 或者 Mozilla Firefox');
 }
+// var base = new Base64();
 var user_token = prompt("用户唯一TOKEN", "");
-if (user_token == "") {
-    user_token = "user" + Date.parse(new Date());
+var user_id = prompt("用户的Member_id", "");
+var user_app = prompt("用户的访问平台", "");
+if (user_token != "" & user_id != "" & user_app != "") {
+    var uri = 'ws://127.0.0.1:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
+    // var uri = 'ws://10.65.209.164:12345/c?uid=' + user_token;
+    var so;
+    createSocket(uri);
+}else{
+    alert("请刷新页面填写完整数据");
 }
-var uri = 'ws://127.0.0.1:12345/c?uid=' + "1" + "&token=" + user_token + "&app=" + "website";
-// var uri = 'ws://10.65.209.164:12345/c?uid=' + user_token;
-var so;
-createSocket(uri);
+
 /**
  * socket建立
  */
@@ -47,8 +49,9 @@ function createSocket(uri) {
 
     so.onopen = function() {
         if (so.readyState == 1) {
-            console.log('===user register===', user_token);
-            // so.send('{"Type":1,"From":"' + user_token + '","Target":[""],"Data":""}');
+            console.log('===user register===', "客户端连接成功");
+        }else{
+            console.log('===user register===', "客户端连接失败");
         }
     }
 
@@ -62,26 +65,6 @@ function createSocket(uri) {
         // console.log('recv_msg.data------' + decodeStr);
     }
 }
-
-/**
- * 发送消息给用户
- */
-function sendMessageToUser() {
-    console.log("这里的so", so);
-    var content = document.getElementById('content').value;
-    so.send('{"Type":2,"From":"' + user_token + '","Target":["0cc120124175285f80dc4b13e18730bb"],"Data":"' + content + '"}');
-    return false;
-}
 </script>
-<!-- type Request struct {
-    From   string
-    Target []string
-    Data   string
-}
-type Content struct {
-    From   *Client
-    Target []*Client
-    Data   interface{}
-} -->
 
 </html>
