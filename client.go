@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"io"
 	"io/ioutil"
@@ -37,16 +38,14 @@ type Client struct {
 
 func (serv *Server) read() {
 	for {
-		log.NewLog("client.go-39:读取read（）首先阻塞", "")
+		log.NewLog("client.go-41:读取read（）首先阻塞", "")
 		select {
 		case req := <-serv.request:
-			// var m Request
-			// json.Unmarshal(message, &m)
-			log.NewLog("client.go-45:传递过来的消息", req)
+			log.NewLog("client.go-44:传递过来的消息", req)
 			var client_group []*Client
 			var content Content
-			log.NewLog("client.go-48:接收消息的用户tokens", req.Target)
-			log.NewLog("client.go-49:查看一下所有的用户", serv.user)
+			log.NewLog("client.go-47:接收消息的用户tokens", req.Target)
+			log.NewLog("client.go-48:查看一下所有的用户", serv.user)
 			for _, uid := range req.Target {
 				for _, app := range conf.CLIENT_APP {
 					if _, ok := serv.user[uid+":"+app]; ok {
@@ -55,8 +54,8 @@ func (serv *Server) read() {
 				}
 			}
 			content.Target = client_group
-			log.NewLog("client.go-58:接收消息的用户（客户端）", client_group)
-			log.NewLog("client.go-59:要发送的消息", req.Data)
+			log.NewLog("client.go-57:接收消息的用户（客户端）", client_group)
+			log.NewLog("client.go-58:要发送的消息", req.Data)
 			content.Data = req.Data
 			serv.broadcast <- &content
 			// default:
@@ -72,10 +71,10 @@ func (c *Client) writePump() {
 		c.conn.Close()
 	}()
 	for {
-		log.NewLog("client.go-75:写阻塞开启", "")
+		log.NewLog("client.go-74:写阻塞开启", "")
 		select {
 		case message, ok := <-c.send:
-			log.NewLog("client.go-78:写入消息", "")
+			log.NewLog("client.go-77:写入消息", "")
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -88,14 +87,13 @@ func (c *Client) writePump() {
 			w.Write(message)
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				// w.Write(newline)
 				w.Write(<-c.send)
 			}
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			log.NewLog("client.go-98:写入心跳", "")
+			log.NewLog("client.go-96:写入心跳", "")
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return
@@ -105,7 +103,7 @@ func (c *Client) writePump() {
 }
 
 func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
-	log.NewLog("client.go-108:所有的客户端", serv.user)
+	log.NewLog("client.go-106:所有的客户端", serv.user)
 	r.ParseForm()
 	uid := r.Form.Get("uid")
 	token := r.Form.Get("token")
@@ -117,14 +115,14 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
-	log.NewLog("client.go-120:协议升级成功", "")
+	log.NewLog("client.go-118:协议升级成功", "")
 	if err != nil {
-		log.NewLog("client.go-122:", err)
+		log.NewLog("client.go-120:", err)
 		return
 	}
 	// 踢出同一个账号的另外一个长连接
 	if _, ok := serv.clients[serv.user[uid+":"+app]]; ok {
-		log.NewLog("client.go-127:踢出同一个账号的另外一个长连接", serv.user[uid+":"+app])
+		log.NewLog("client.go-125:踢出同一个账号的另外一个长连接", serv.user[uid+":"+app])
 		delete(serv.clients, serv.user[uid+":"+app])
 		close((serv.user[uid+":"+app]).send)
 	}
@@ -132,33 +130,43 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 		delete(serv.user, uid+":"+app)
 	}
 	client := &Client{serv: serv, conn: conn, send: make(chan []byte, 256), uid: uid, app: app}
-	log.NewLog("client.go-135:开始客户端注册，第一步", "")
+	log.NewLog("client.go-133:开始客户端注册，第一步", "")
 	client.serv.register <- client
 	go client.writePump()
 }
 
 func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
-	go serv.read()
-	err1 := r.ParseForm()
-	_msg := r.Form.Get("Message")
-	log.NewLog("client.go-144:读取服务器消息", _msg)
-	// decode, _ := base64.StdEncoding.DecodeString(_msg)
-	// log.NewLog("client.go-126:读取服务器消息base64解码后的消息", string(decode))
-	var req Request
-	err2 := json.Unmarshal([]byte(_msg), &req)
-	// err2 := json.Unmarshal(decode, &req)
-	log.NewLog("client.go-150:读取服务器消息解析后的", req)
 	ip := util.GetIp()
-	if ip != conf.SERVER_IP || err1 != nil || err2 != nil || _msg == "" || &req == nil {
-		log.NewLog("client.go-服务端消息验证:", ip)
-		log.NewLog("client.go-服务端消息验证:", err1)
-		log.NewLog("client.go-服务端消息验证:", err2)
-		log.NewLog("client.go-服务端消息验证:", _msg)
+	log.NewLog("client.go-服务端的IP-140:", ip)
+	if ip != conf.SERVER_IP {
 		io.WriteString(w, "400")
 		return
 	}
-	serv.request <- &req
-	io.WriteString(w, "200")
+	go serv.read()
+	err1 := r.ParseForm()
+	log.NewLog("client.go-服务端消息验证-147:", err1)
+	_msg := r.Form.Get("Message")
+	log.NewLog("client.go-149:读取服务器消息", _msg)
+	_count := r.Form.Get("Count")
+	if _msg != "" && err1 == nil {
+		var req Request
+		err2 := json.Unmarshal([]byte(_msg), &req)
+		log.NewLog("client.go-154:读取服务器消息解析后的", req)
+		if err2 != nil || &req == nil {
+			log.NewLog("client.go-服务端消息验证156:", err2)
+			io.WriteString(w, "400")
+			return
+		}
+		serv.request <- &req
+		io.WriteString(w, "200")
+		return
+	}
+	if _count == "online_users" {
+		log.NewLog("!当前在线人!", serv.user)
+		io.WriteString(w, "当前在线人数"+fmt.Sprint(len(serv.user)))
+		return
+	}
+	io.WriteString(w, "400")
 	return
 }
 
