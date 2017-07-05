@@ -96,6 +96,7 @@ func (c *Client) writePump() {
 			log.NewLog("client.go-96:写入心跳", "")
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				log.NewLog("写入心跳不成功，无效的链接---", c.uid+":"+c.app)
 				return
 			}
 		}
