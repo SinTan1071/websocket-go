@@ -61,6 +61,12 @@ GET ws://xx.xxx.xx.xx:12345/c
     "To" : 1, // 卡片或者团队或者场景对应的ID
     "Content" : "xxx修改了xxx"
 }
+// 卡片移动
+{
+    "Type" : 2,
+    "Activity" : "scene", 
+    "To" : 1, // 场景对应的ID
+}
 // 消息通知
 {
     "Type" : 0,
