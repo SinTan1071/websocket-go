@@ -108,12 +108,25 @@ func (c *Client) writePump() {
 				}
 				return
 			}
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				log.NewLog("client.go-113:写入出错--"+c.uid+":"+c.app, err)
+				return
+			}
+			w.Write([]byte("ping"))
+			n := len(c.send)
+			for i := 0; i < n; i++ {
+				w.Write(<-c.send)
+			}
+			if err := w.Close(); err != nil {
+				return
+			}
 		}
 	}
 }
 
 func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
-	log.NewLog("client.go-116:所有的客户端", serv.user)
+	log.NewLog("client.go-129:所有的客户端", serv.user)
 	r.ParseForm()
 	uid := r.Form.Get("uid")
 	token := r.Form.Get("token")
@@ -125,14 +138,14 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
-	log.NewLog("client.go-128:协议升级成功", "")
+	log.NewLog("client.go-141:协议升级成功", "")
 	if err != nil {
-		log.NewLog("client.go-130:", err)
+		log.NewLog("client.go-143:", err)
 		return
 	}
 	// 踢出同一个账号的另外一个长连接
 	if _, ok := serv.clients[serv.user[uid+":"+app]]; ok {
-		log.NewLog("client.go-135:踢出同一个账号的另外一个长连接", serv.user[uid+":"+app])
+		log.NewLog("client.go-148:踢出同一个账号的另外一个长连接", serv.user[uid+":"+app])
 		delete(serv.clients, serv.user[uid+":"+app])
 		close((serv.user[uid+":"+app]).send)
 	}
@@ -140,30 +153,30 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 		delete(serv.user, uid+":"+app)
 	}
 	client := &Client{serv: serv, conn: conn, send: make(chan []byte, 256), uid: uid, app: app}
-	log.NewLog("client.go-143:开始客户端注册，第一步", "")
+	log.NewLog("client.go-156:开始客户端注册，第一步", "")
 	client.serv.register <- client
 	go client.writePump()
 }
 
 func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
 	ip := util.GetIp()
-	log.NewLog("client.go-服务端的IP-150:", ip)
+	log.NewLog("client.go-服务端的IP-163:", ip)
 	if ip != conf.SERVER_IP {
 		io.WriteString(w, "400")
 		return
 	}
 	go serv.read()
 	err1 := r.ParseForm()
-	log.NewLog("client.go-服务端消息验证-157:", err1)
+	log.NewLog("client.go-服务端消息验证-170:", err1)
 	_msg := r.Form.Get("Message")
-	log.NewLog("client.go-159:读取服务器消息", _msg)
+	log.NewLog("client.go-172:读取服务器消息", _msg)
 	_count := r.Form.Get("Count")
 	if _msg != "" && err1 == nil {
 		var req Request
 		err2 := json.Unmarshal([]byte(_msg), &req)
-		log.NewLog("client.go-164:读取服务器消息解析后的", req)
+		log.NewLog("client.go-177:读取服务器消息解析后的", req)
 		if err2 != nil || &req == nil {
-			log.NewLog("client.go-服务端消息验证166:", err2)
+			log.NewLog("client.go-服务端消息验证179:", err2)
 			io.WriteString(w, "400")
 			return
 		}
