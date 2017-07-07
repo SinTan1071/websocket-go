@@ -70,6 +70,8 @@ GET ws://xx.xxx.xx.xx:12345/c
 // 消息通知
 {
     "Type" : 0,
+    "Notify" : "card_comment", // 卡片评论通知气泡 card\_comment 卡片上传通知气泡 card\_attachment
+    "To" : 2,
     "Content" : "欢迎加入团队"
 }
 ```
