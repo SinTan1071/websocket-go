@@ -159,12 +159,12 @@ func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
 }
 
 func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
-	ip := util.GetIp()
-	log.NewLog("client.go-服务端的IP-163:", ip)
-	if ip != conf.SERVER_IP {
-		io.WriteString(w, "400")
-		return
-	}
+	// ip := util.GetIp()
+	// log.NewLog("client.go-服务端的IP-163:", ip)
+	// if ip != conf.SERVER_IP {
+	// 	io.WriteString(w, "400")
+	// 	return
+	// }
 	go serv.read()
 	err1 := r.ParseForm()
 	log.NewLog("client.go-服务端消息验证-170:", err1)

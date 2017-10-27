@@ -32,8 +32,8 @@ var user_token = prompt("用户唯一TOKEN", "");
 var user_id = prompt("用户的Member_id", "");
 var user_app = prompt("用户的访问平台", "");
 if (user_token != "" & user_id != "" & user_app != "") {
-    var uri = 'ws://127.0.0.1:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
-    // var uri = 'ws://10.65.209.164:12345/c?uid=' + user_token;
+    // var uri = 'ws://127.0.0.1:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
+    var uri = 'ws://10.65.209.164:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
     var so;
     createSocket(uri);
 }else{
