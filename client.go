@@ -1,22 +1,23 @@
 package main
 
 import (
+	"TooWhite/db"
+	"TooWhite/helper"
+	"TooWhite/log"
+	// "bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/gorilla/websocket"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
-	"too-white/conf"
-	"too-white/log"
-	// "too-white/util"
 )
 
 const (
-	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
-	pingPeriod     = (pongWait * 9) / 10
+	writeWait = 10 * time.Second
+
+	pongWait = 60 * time.Second
+
+	pingPeriod = (pongWait * 9) / 10
+
 	maxMessageSize = 512
 )
 
@@ -30,36 +31,145 @@ var upgrader = websocket.Upgrader{
 
 type Client struct {
 	serv *Server
+
 	conn *websocket.Conn
+
 	send chan []byte
-	uid  string //存放用户的唯一标示
-	app  string //存放用户的唯一标示
+
+	uid string //存放用户的唯一标示
+
 }
 
-func (serv *Server) read() {
+func (c *Client) readPump() {
+	defer func() {
+		c.serv.unregister <- c
+		c.conn.Close()
+	}()
+	c.conn.SetReadLimit(maxMessageSize)
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		log.NewLog("client.go-41:读取read（）首先阻塞", "")
-		select {
-		case req := <-serv.request:
-			log.NewLog("client.go-44:传递过来的消息", req)
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
+				log.NewLog("client.go-56:", err)
+			}
+			break
+		}
+		var m Request
+		var res Response
+		var user_token_group []string
+		json.Unmarshal(message, &m)
+		log.NewLog("client.go-64:读取到的Msg结构体", m)
+		if m.From != "" {
+			if m.MsgType == 0 {
+				// 加入用户进入在线状态
+				c.uid = m.From
+				user := &db.User{
+					Name:  m.Data,
+					Token: m.From,
+				}
+				user = db.UserJoin(user)
+				user_token_group = append(user_token_group, m.From)
+				offline_msgs := db.GetUserOffLineMsg(m.From)
+				res.Msg = "用户登录成功"
+				res.Data = offline_msgs
+				for range offline_msgs {
+					db.DelUserOffLineMsg(m.From)
+				}
+			} else if m.MsgType == 1 {
+				// 增加一个分组
+				gtoken := helper.MakeGroupToken(m.From)
+				user := db.GetUserByToken(m.From)
+				group := &db.Group{
+					Name:    m.Data,
+					Token:   gtoken,
+					Creater: user.Token,
+					Users:   []string{user.Token},
+				}
+				db.NewGroup(group)
+				user_token_group = append(user_token_group, m.From)
+				res.Msg = "分组创建成功"
+				res.Data = group
+			} else if m.MsgType == 2 {
+				// 用户加入一个分组
+				user := db.GetUserByToken(m.From)
+				group := db.GetGroupByToken(m.Data)
+				db.UserJoinGroup(m.From, m.Data)
+				res.Msg = "欢迎" + user.Name + "加入" + group.Name + "分组"
+				group = db.GetGroupByToken(m.Data)
+				user_token_group = group.Users
+			} else if m.MsgType == 3 {
+				// 私聊
+				from_user := db.GetUserByToken(m.From)
+				to_user := db.GetUserByToken(m.Target)
+				res.Msg = from_user.Name + "对" + to_user.Name + "说：" + m.Data
+				//
+				// 使用redis获取名称
+				// from_user_name := db.GetUserNameByToken(m.From)
+				// to_user_name := db.GetUserNameByToken(m.Target)
+				// res.Msg = from_user_name + "对" + to_user_name + "说：" + m.Data
+				//
+				user_token_group = []string{m.From, m.Target}
+			} else if m.MsgType == 4 {
+				// 群聊
+				from_user := db.GetUserByToken(m.From)
+				to_group := db.GetGroupByToken(m.Target)
+				res.Msg = from_user.Name + "在群" + to_group.Name + "说：" + m.Data
+				//
+				// 使用redis获取名称
+				// from_user_name := db.GetUserNameByToken(m.From)
+				// to_group_name := db.GetGroupNameByToken(m.Target)
+				// to_group := db.GetGroupUsersByToken(m.Target)
+				// res.Msg = from_user_name + "在群" + to_group_name + "说：" + m.Data
+				//
+				user_token_group = to_group.Users
+			} else if m.MsgType == 5 {
+				// 删除分组
+				user_token_group = append(user_token_group, m.From)
+				if db.DelGroup(m.From, m.Data) {
+					res.Msg = "删除成功"
+				} else {
+					res.Msg = "删除失败"
+				}
+			} else if m.MsgType == 6 {
+				// 用户离开分组
+				user := db.GetUserByToken(m.From)
+				group := db.GetGroupByToken(m.Data)
+				db.UserOffGroup(m.From, m.Data)
+				res.Msg = user.Name + "离开了" + group.Name + "分组"
+				user_token_group = group.Users
+			}
 			var client_group []*Client
 			var content Content
-			log.NewLog("client.go-47:接收消息的用户tokens", req.Target)
-			log.NewLog("client.go-48:查看一下所有的用户", serv.user)
-			for _, uid := range req.Target {
-				for _, app := range conf.CLIENT_APP {
-					if _, ok := serv.user[uid+":"+app]; ok {
-						client_group = append(client_group, serv.user[uid+":"+app])
+			content.From = c
+			log.NewLog("client.go-133:接收消息的用户tokens", user_token_group)
+			for client, _ := range c.serv.clients {
+				for _, user_token := range user_token_group {
+					if db.IsUserOnline(user_token) {
+						// 用户在线
+						if client.uid == user_token {
+							client_group = append(client_group, client)
+							content.Target = client_group
+							log.NewLog("client.go-141:接收消息的用户（客户端）", client_group)
+							log.NewLog("client.go-142:要发送的消息", res)
+							content.Data = res
+							c.serv.broadcast <- &content
+						}
+					} else {
+						// 用户离线
+						offline_msg := &db.OffLineMsg{
+							SendFrom: m.From,
+							SendTo:   user_token,
+							SendTime: time.Now(),
+							Content:  res,
+						}
+						db.SaveUserOffLineMsg(offline_msg)
 					}
 				}
 			}
-			content.Target = client_group
-			log.NewLog("client.go-57:接收消息的用户（客户端）", client_group)
-			log.NewLog("client.go-58:要发送的消息", req.Data)
-			content.Data = req.Data
-			serv.broadcast <- &content
-			// default:
-			// 	break
+		} else {
+			return
 		}
 	}
 }
@@ -71,144 +181,47 @@ func (c *Client) writePump() {
 		c.conn.Close()
 	}()
 	for {
-		log.NewLog("client.go-74:写阻塞开启", c.uid+":"+c.app)
 		select {
 		case message, ok := <-c.send:
-			log.NewLog("client.go-77:写入消息", c.uid+":"+c.app)
+
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
+
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				log.NewLog("client.go-85:写入出错--"+c.uid+":"+c.app, err)
 				return
 			}
 			w.Write(message)
+
 			n := len(c.send)
 			for i := 0; i < n; i++ {
+				// w.Write(newline)
 				w.Write(<-c.send)
 			}
+
 			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
-			log.NewLog("client.go-97:写入心跳", c.uid+":"+c.app)
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := c.conn.WriteMessage(websocket.PingMessage, []byte("ping")); err != nil {
-				log.NewLog("写入心跳不成功，错误---"+c.uid+":"+c.app, err)
-				log.NewLog("写入心跳不成功，无效的链接", c.uid+":"+c.app)
-				if _, ok := c.serv.user[c.uid+":"+c.app]; ok {
-					delete(c.serv.user, c.uid+":"+c.app)
-				}
-				if _, ok := c.serv.clients[c]; ok {
-					delete(c.serv.clients, c)
-					close(c.send)
-				}
-				return
-			}
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				log.NewLog("client.go-113:写入出错--"+c.uid+":"+c.app, err)
-				return
-			}
-			w.Write([]byte("ping"))
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(<-c.send)
-			}
-			if err := w.Close(); err != nil {
+			if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
 		}
 	}
 }
 
-func serveWsClient(serv *Server, w http.ResponseWriter, r *http.Request) {
-	log.NewLog("client.go-129:所有的客户端", serv.user)
-	r.ParseForm()
-	uid := r.Form.Get("uid")
-	token := r.Form.Get("token")
-	app := r.Form.Get("app")
-	go Auth(uid, token)
-	ok := <-check
-	if !ok || uid == "" || token == "" || app == "" {
-		io.WriteString(w, "400")
-		return
-	}
+func serveWs(serv *Server, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
-	log.NewLog("client.go-141:协议升级成功", "")
 	if err != nil {
-		log.NewLog("client.go-143:", err)
+		log.NewLog("client.go-207:", err)
 		return
 	}
-	// 踢出同一个账号的另外一个长连接
-	if _, ok := serv.clients[serv.user[uid+":"+app]]; ok {
-		log.NewLog("client.go-148:踢出同一个账号的另外一个长连接", serv.user[uid+":"+app])
-		delete(serv.clients, serv.user[uid+":"+app])
-		close((serv.user[uid+":"+app]).send)
-	}
-	if _, ok := serv.user[uid+":"+app]; ok {
-		delete(serv.user, uid+":"+app)
-	}
-	client := &Client{serv: serv, conn: conn, send: make(chan []byte, 256), uid: uid, app: app}
-	log.NewLog("client.go-156:开始客户端注册，第一步", "")
+	client := &Client{serv: serv, conn: conn, send: make(chan []byte, 256)}
 	client.serv.register <- client
 	go client.writePump()
-}
-
-func serveWsServer(serv *Server, w http.ResponseWriter, r *http.Request) {
-	// ip := util.GetIp()
-	// log.NewLog("client.go-服务端的IP-163:", ip)
-	// if ip != conf.SERVER_IP {
-	// 	io.WriteString(w, "400")
-	// 	return
-	// }
-	go serv.read()
-	err1 := r.ParseForm()
-	log.NewLog("client.go-服务端消息验证-170:", err1)
-	_msg := r.Form.Get("Message")
-	log.NewLog("client.go-172:读取服务器消息", _msg)
-	_count := r.Form.Get("Count")
-	if _msg != "" && err1 == nil {
-		var req Request
-		err2 := json.Unmarshal([]byte(_msg), &req)
-		log.NewLog("client.go-177:读取服务器消息解析后的", req)
-		if err2 != nil || &req == nil {
-			log.NewLog("client.go-服务端消息验证179:", err2)
-			io.WriteString(w, "400")
-			return
-		}
-		serv.request <- &req
-		io.WriteString(w, "200")
-		return
-	}
-	if _count == "online_users" {
-		log.NewLog("!当前在线人!", serv.user)
-		io.WriteString(w, "当前在线人数"+fmt.Sprint(len(serv.user)))
-		return
-	}
-	io.WriteString(w, "400")
-	return
-}
-
-func Auth(uid, token string) {
-	log.NewLog("client.go-Auth方法验证UID和Token:", uid+"---"+token)
-	url := conf.CLIENT_AUTH + "?uid=" + uid + "&token=" + token
-	resp, err := http.Get(url)
-	if err != nil {
-		log.NewLog("client.go-Auth方法请求服务器报错", err)
-		check <- false
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	log.NewLog("服务器鉴权返回", string(body))
-	if string(body) != "200" {
-		check <- false
-		return
-	}
-	check <- true
-	return
+	client.readPump()
 }

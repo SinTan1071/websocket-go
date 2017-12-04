@@ -18,28 +18,37 @@ div {
 </style>
 
 <body>
-    消息：
-    <div id="content">
+    <div>
+        <input id="msg" type="text" name="" placeholder="消息">
+        <br> 发送至
+        <input id="to" type="text" name="" placeholder="目标">
+        <br>
+        <button onclick="sendMessageToUser()">私信</button>
+        <button onclick="sendMessageToGroup()">群聊</button>
     </div>
+    <div>
+        <input id="add-group" type="text">
+        <button onclick="addGroup()">增加分组</button>
+    </div>
+    <div>
+        <input id="user-join-group" type="text">
+        <button onclick="userJoinGroup()">用户加入分组</button>
+    </div>
+    <footer>
+        &copy;TooWhite
+    </footer>
 </body>
-<!-- <script src="base64.js"></script> -->
 <script type="text/javascript">
 if (typeof(WebSocket) == 'undefined') {
     alert('你的浏览器不支持 WebSocket ，推荐使用Google Chrome 或者 Mozilla Firefox');
 }
-// var base = new Base64();
-var user_token = prompt("用户唯一TOKEN", "");
-var user_id = prompt("用户的Member_id", "");
-var user_app = prompt("用户的访问平台", "");
-if (user_token != "" & user_id != "" & user_app != "") {
-    // var uri = 'ws://127.0.0.1:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
-    var uri = 'ws://10.65.209.164:12345/c?uid=' + user_id + "&token=" + user_token + "&app=" + user_app;
-    var so;
-    createSocket(uri);
-}else{
-    alert("请刷新页面填写完整数据");
+var user_id = prompt("用户唯一TOKEN", "");
+if (user_id == "") {
+    user_id = "user" + Date.parse(new Date());
 }
-
+var user_name = prompt("用户名", "all");;
+var uri = 'ws://10.65.106.102:12345';
+createSocket(uri);
 /**
  * socket建立
  */
@@ -49,9 +58,8 @@ function createSocket(uri) {
 
     so.onopen = function() {
         if (so.readyState == 1) {
-            console.log('===user register===', "客户端连接成功");
-        }else{
-            console.log('===user register===', "客户端连接失败");
+            console.log('===user register===', user_id);
+            so.send('{"MsgType":0,"From":"' + user_id + '","Target":"","Data":"' + user_name + '"}');
         }
     }
 
@@ -61,10 +69,56 @@ function createSocket(uri) {
 
     so.onmessage = function(recv_msg) {
         console.log('===recv_msg===', recv_msg);
-        // var decodeStr = Base64.decode(recv_msg.data);
-        // console.log('recv_msg.data------' + decodeStr);
+        // console.log('recv_msg.type------' + recv_msg.type);
     }
 }
+/**
+ * 发送消息给用户
+ */
+function sendMessageToUser() {
+    var to_user = document.getElementById('to').value;
+    var content = document.getElementById('msg').value;
+    so.send('{"MsgType":3,"From":"' + user_id + '","Target":"' + to_user + '","Data":"' + content + '"}');
+    return false;
+}
+/**
+ * 发送消息给分组
+ */
+function sendMessageToGroup() {
+    var to_group = document.getElementById('to').value;
+    var content = document.getElementById('msg').value;
+    so.send('{"MsgType":4,"From":"' + user_id + '","Target":"' + to_group + '","Data":"' + content + '"}');
+    return false;
+}
+/**
+ * 增加分组
+ */
+function addGroup() {
+    var group = document.getElementById('add-group').value;
+    so.send('{"MsgType":1,"From":"' + user_id + '","Target":"","Data":"' + group + '"}')
+    return false;
+}
+/**
+ * 用户加入分组
+ */
+function userJoinGroup() {
+    var group = document.getElementById('user-join-group').value;
+    so.send('{"MsgType":2,"From":"' + user_id + '","Target":"","Data":"' + group + '"}')
+    return false;
+}
 </script>
+<!-- type Msg struct {
+	MsgType int
+	UserId  string
+	GroupId string
+	Content Content
+}
+type Content struct {
+	ContentType int
+	From        string
+	ToUser      string
+	ToGroup     string
+	Data        string
+} -->
 
 </html>

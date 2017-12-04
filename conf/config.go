@@ -1,11 +1,13 @@
 package conf
 
-const PORT = ":12345"
+const DB_DOMAIN = "localhost"
+const DB_PORT = "27017"
+const DB_DATABASE = "too-white-test"
 
-const SERVER_TOKEN = "xxx1qazxsw23edcvfr45tgbnhy67ujmxxx"
+const REDIS_HOST = "localhost"
+const REDIS_PORT = "6379"
+const REDIS_USER_DB = 1
+const REDIS_GROUP_DB = 2
+const REDIS_GROUP_USER_DB = 3
 
-const SERVER_IP = "172.20.0.2"
-
-const CLIENT_AUTH = "http://10.65.209.164:8000/api/kong/auth"
-
-var CLIENT_APP = []string{"website", "mobile", "android", "ios"}
+const LOG_DATABASE = "too-white-log"
